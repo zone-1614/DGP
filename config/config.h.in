@@ -1,4 +1,0 @@
-#pragma once
-#include <string>
-#include <filesystem>
-static std::string current_path = std::filesystem::current_path().string();
