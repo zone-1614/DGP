@@ -1,0 +1,7 @@
+add_executable(hw2_curvature hw2.cpp)
+target_include_directories(hw2_curvature PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/src)
+target_include_directories(hw2_curvature PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/imgui)
+target_include_directories(hw2_curvature PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/eigen)
+target_include_directories(hw2_curvature PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/glfw/include)
+target_include_directories(hw2_curvature PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/glew/include)
+target_link_libraries(hw2_curvature PRIVATE pmp_vis)
