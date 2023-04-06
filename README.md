@@ -29,8 +29,47 @@
 
 ![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw2_curvature_multicube2.png)
 
+
 ![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw2_curvature_bunny1.png)
 
 
 ![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw2_curvature_bunny2.png)
+
+
+### 作业3
+作业3是曲面去噪, 本来设计了一个误差, 根据误差去调整迭代次数, 但是不同曲面这个误差不太一样, 所以把迭代次数和高斯函数都作为可以调的参数.
+
+下面两张图是基本的去噪效果, 感觉效果还是不错的
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw3_denoising_1.png)
+
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw3_denoising_3.png)
+
+
+下面三张图展示的是不同参数对结果的影响. 去噪前:
+
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw3_denoising_4.png)
+
+
+去噪后:
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw3_denoising_5.png)
+
+
+修改参数后的效果:
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw3_denoising_6.png)
+
+
+最后两张图展示的是对较大噪声的去噪效果, 去噪前:
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw3_denoising_7.png)
+
+
+去噪后:
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw3_denoising_8.png)
+
 

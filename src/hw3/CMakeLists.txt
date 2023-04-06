@@ -1,0 +1,7 @@
+add_executable(hw3_denoising hw3.cpp)
+target_include_directories(hw3_denoising PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/src)
+target_include_directories(hw3_denoising PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/imgui)
+target_include_directories(hw3_denoising PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/eigen)
+target_include_directories(hw3_denoising PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/glfw/include)
+target_include_directories(hw3_denoising PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/glew/include)
+target_link_libraries(hw3_denoising PRIVATE pmp_vis)

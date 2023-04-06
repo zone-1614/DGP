@@ -7,47 +7,16 @@
 
 #include "../util.h"
 
-class CurvatureViewer : public pmp::MeshViewer {
+namespace zone {
+
+class CurvatureViewer : public MyViewer {
 public:
     CurvatureViewer() 
-        : pmp::MeshViewer("curvature viewer", 900, 600) {
-        std::filesystem::path model_path(zone::current_path.string() + "/model");
-        for (auto& file : std::filesystem::directory_iterator(model_path)) {
-            models.push_back(file.path().stem().string());
-        }
-        std::string first = zone::current_path.string() + "/model/" + models.front() + ".obj";
-        load_mesh(first.c_str());
-    }
+        : MyViewer("curvature viewer") { }
 
 protected:
     void process_imgui() {
-        pmp::MeshViewer::process_imgui();
-
-        ImGui::Spacing();
-        if (ImGui::CollapsingHeader("model", ImGuiTreeNodeFlags_DefaultOpen)) {
-            static int item_current_idx = 0;
-            const char* combo_preview_value = (models[item_current_idx]).c_str();
-            if (ImGui::BeginCombo("models", combo_preview_value))
-            {
-                for (int n = 0; n < models.size(); n++)
-                {
-                    const bool is_selected = (item_current_idx == n);
-                    if (ImGui::Selectable((models[n]).c_str(), is_selected)) {
-                        std::string filename = zone::current_path.string() + "/model/" + models[n] + ".obj";
-                        this->load_mesh(filename.c_str());
-                        item_current_idx = n;
-                    }
-
-                    if (is_selected)
-                        ImGui::SetItemDefaultFocus();
-                }
-                ImGui::EndCombo();
-            }
-            if (ImGui::Button("reload mesh")) {
-                load_mesh(filename_.c_str());
-                set_draw_mode("Smooth Shading");
-            }
-        }
+        MyViewer::process_imgui();
 
         ImGui::Spacing();
         if (ImGui::CollapsingHeader("curvature type", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -240,11 +209,12 @@ private:
     }
 
 private:
-    std::vector<std::string> models;
     int curvature_type = 0;
 };
 
+
+}
 int main() {
-    CurvatureViewer window;
+    zone::CurvatureViewer window;
     window.run();
 }
