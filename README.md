@@ -73,3 +73,22 @@
 ![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw3_denoising_8.png)
 
 
+### 作业4
+Tutte's embedding method
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw4_00.png)
+
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw4_01.png)
+
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw4_10.png)
+
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw4_11.png)
+
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw4_20.png)
+
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw4_21.png)

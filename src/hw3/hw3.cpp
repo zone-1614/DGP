@@ -11,7 +11,7 @@ using namespace zone;
 
 namespace zone {
 
-class DenoisingViewer : public zone::MyViewer {
+class DenoisingViewer : public MyViewer {
 public:
     DenoisingViewer() 
         : MyViewer("denoising viewer") { }

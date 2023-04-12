@@ -1,0 +1,7 @@
+add_executable(hw4_parameterazation hw4.cpp)
+target_include_directories(hw4_parameterazation PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/src)
+target_include_directories(hw4_parameterazation PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/imgui)
+target_include_directories(hw4_parameterazation PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/eigen)
+target_include_directories(hw4_parameterazation PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/glfw/include)
+target_include_directories(hw4_parameterazation PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/glew/include)
+target_link_libraries(hw4_parameterazation PRIVATE pmp_vis)
