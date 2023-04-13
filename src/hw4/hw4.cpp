@@ -29,40 +29,10 @@ protected:
 
 private:
     void tutte_embedding() {
-        // 找到boundary
-        std::vector<pmp::Halfedge> boundary;
-        pmp::Halfedge first, current;
+        // get boundary vertices
+        auto boundary_v = get_boundary_vertices();
 
-        // 找第一条边界
-        for (auto h : mesh_.halfedges()) {
-            if (mesh_.is_boundary(h)) {
-                boundary.push_back(h);
-                first = h;
-                break;
-            }
-        }
-
-        current = first;
-        // 沿着这条边界找所有的边界
-        do {
-            auto v = mesh_.to_vertex(current);
-            for (auto hv : mesh_.halfedges(v)) {
-                if (!mesh_.is_boundary(hv))
-                    continue;
-                else if (mesh_.opposite_halfedge(hv) == current)
-                    continue;
-                
-                boundary.push_back(hv);
-                current = hv;
-            }
-        } while (current != first);
-
-        std::vector<pmp::Vertex> boundary_v;
-        boundary_v.resize(boundary.size());
-        for (int i = 0; i < boundary.size(); i++) {
-            boundary_v[i] = mesh_.to_vertex(boundary[i]);
-        }
-        // 把boundary上的点映射到圆上
+        // map the boundary_v to a unit circle
         const int n = boundary_v.size();
         const float step = 2.0f * EIGEN_PI / (float) n;
         float theta = 0.0f;
@@ -73,7 +43,7 @@ private:
             set_point(v, p);
         }
 
-        // 解方程组
+        // build and solve the linear system
         std::vector<Eigen::Triplet<float>> tri;
         Eigen::MatrixXf B(mesh_.n_vertices(), 2);
         B.setZero();
@@ -95,12 +65,14 @@ private:
                 tri.push_back({ i, i, ii });
             }
         }
+        
         Eigen::SparseMatrix<float> A(mesh_.n_vertices(), mesh_.n_vertices());
         A.setFromTriplets(tri.begin(), tri.end());
         
         Eigen::SparseLU<Eigen::SparseMatrix<float>> solver(A);
         Eigen::MatrixXf X = solver.solve(B);
 
+        // update the coordinate
         for (auto v : mesh_.vertices()) {
             if (mesh_.is_boundary(v)) {
                 continue;
@@ -109,6 +81,37 @@ private:
                 set_point(v, p);
             }
         }
+    }
+
+    std::vector<pmp::Vertex> get_boundary_vertices() {
+        std::vector<pmp::Vertex> boundary_v;
+        pmp::Halfedge first, current;
+
+        // find first boundary halfedge
+        for (auto h : mesh_.halfedges()) {
+            if (mesh_.is_boundary(h)) {
+                boundary_v.push_back(mesh_.to_vertex(h));
+                first = h;
+                current = h;
+                break;
+            }
+        }
+
+        // find all boundary vertex
+        do {
+            for (auto hv : mesh_.halfedges(mesh_.to_vertex(current))) {
+                if (!mesh_.is_boundary(hv)) {
+                    continue;
+                } else if (mesh_.opposite_halfedge(hv) == current) {
+                    continue;
+                } else {
+                    current = hv;
+                    boundary_v.push_back(mesh_.to_vertex(hv));
+                }
+            }
+        } while (current != first);
+
+        return boundary_v;
     }
 };
 
