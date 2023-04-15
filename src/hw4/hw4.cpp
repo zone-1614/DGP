@@ -40,7 +40,7 @@ private:
             pmp::Point p{ std::cosf(theta), std::sinf(theta), 0.0f };
             theta += step;
             auto v = boundary_v[i];
-            set_point(v, p);
+            mesh_.position(v) = p;
         }
 
         // build and solve the linear system
@@ -78,7 +78,7 @@ private:
                 continue;
             } else {
                 pmp::Point p{ X(v.idx(), 0), X(v.idx(), 1), 0.0 };
-                set_point(v, p);
+                mesh_.position(v) = p;
             }
         }
     }

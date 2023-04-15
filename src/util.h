@@ -55,12 +55,6 @@ public:
         }
         std::string first = zone::current_path.string() + "/model/" + models_.front() + ".obj";
         load_mesh(first.c_str());
-
-        pos_ = mesh_.vertex_property<pmp::Point>("v:point");
-    }
-
-    void set_point(pmp::Vertex v, pmp::Point p) {
-        pos_[v] = p;
     }
 
 protected:
@@ -82,7 +76,6 @@ protected:
                     if (ImGui::Selectable((models_[n]).c_str(), is_selected)) {
                         std::string filename = zone::current_path.string() + "/model/" + models_[n] + ".obj";
                         load_mesh(filename.c_str());
-                        pos_ = mesh_.vertex_property<pmp::Point>("v:point");
                         item_current_idx = n;
                     }
 
@@ -93,7 +86,6 @@ protected:
             }
             if (ImGui::Button("reload mesh")) {
                 load_mesh(filename_.c_str());
-                pos_ = mesh_.vertex_property<pmp::Point>("v:point");
                 set_draw_mode("Smooth Shading");
             }
         }
@@ -112,7 +104,6 @@ protected:
 
 private:
     std::vector<std::string> models_;
-    pmp::VertexProperty<pmp::Point> pos_;
 };
 
 }

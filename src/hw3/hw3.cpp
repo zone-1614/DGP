@@ -40,6 +40,7 @@ private:
         // 计算平均的边长
         const int n = mesh_.n_edges();
         double avg_edge_length = 0.0;
+        
         for (auto e : mesh_.edges()) {
             const auto v0 = mesh_.vertex(e, 0);
             const auto v1 = mesh_.vertex(e, 1);
@@ -53,7 +54,7 @@ private:
         double l = 0.2 * avg_edge_length;
         for (auto v : mesh_.vertices()) {
             auto p = mesh_.position(v);            
-            set_point(v, p + random_unit_vector() * l);
+            mesh_.position(v) = p + random_unit_vector() * l;
         }
     }
 
@@ -148,7 +149,7 @@ private:
                     delta += (pmp::dot(nj, cj - xi) * nj);
                 }
                 delta /= (double)Ni;
-                set_point(vi, xi + delta);
+                mesh_.position(vi) =  xi + delta;
             }
 
             // 计算误差
@@ -167,7 +168,7 @@ private:
         double new_volume = compute_volume();
         double k = old_volume / new_volume;
         for (auto v : mesh_.vertices()) {
-            set_point(v, mesh_.position(v) * k);
+            mesh_.position(v) = mesh_.position(v) * k;
         }
     }
 
