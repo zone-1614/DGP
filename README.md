@@ -92,3 +92,11 @@ Tutte's embedding method
 
 
 ![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw4_21.png)
+
+自己实现了LSCM, 下面分别是balls, bunny, Nefertiti_face的参数化结果
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw4_LSCM_balls.png)
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw4_LSCM_bunny.png)
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw4_LSCM_face.png)
