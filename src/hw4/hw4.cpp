@@ -9,9 +9,9 @@
 
 namespace zone {
 
-class ParameterazationViewer : public MyViewer {
+class ParameterizationViewer : public MyViewer {
 public:
-    ParameterazationViewer() : MyViewer("Parameterazation Viewer") { 
+    ParameterizationViewer() : MyViewer("Parameterazation Viewer") { 
         set_draw_mode("Hidden Line");
     }
 
@@ -23,17 +23,20 @@ protected:
             if (ImGui::Button("tutte")) {
                 tutte_embedding();
                 update_mesh();
+                set_draw_mode("Hidden Line");
                 view_all();
             }
             if (ImGui::Button("LSCM")) {
                 LSCM();
                 update_mesh();
+                set_draw_mode("Hidden Line");
                 view_all();
             }
-            ImGui::SliderInt("ARAP max iter times", &ARAP_max_iter_times, 1, 50);
+            ImGui::SliderInt("ARAP max iter times", &ARAP_max_iter_times, 1, 100);
             if (ImGui::Button("ARAP")) {
                 ARAP();
                 update_mesh();
+                set_draw_mode("Hidden Line");
                 view_all();
             }
         }
@@ -96,85 +99,26 @@ private:
     }
 
     void ARAP() {
-        // 1. execute tutte embedding before ARAP
-        tutte_embedding(); 
-        std::cout << "tutte" << std::endl;
-        // each faces area (multiply by 2.0)
+        auto proj = compute_project();
         auto area = compute_all_area();
-        std::cout << "compute area" << std::endl;
-        // each halfedge's cot_weight
         auto cot = compute_all_cot();
-        std::cout << "compute cot" << std::endl;
-        // init uv as xy
         auto ARAP_uv = init_uv();
-        std::cout << "init uv" << std::endl;
 
-        // 2. Global matrix G is constant
+        // Global matrix G is constant, so it can build in advance
         Eigen::SparseMatrix<float> G = build_global_matrix();
-        std::cout << "build_global_matrix" << std::endl;
-        Eigen::SimplicialLDLT<Eigen::SparseMatrix<float>> solver(G);
+        // Eigen::SimplicialLDLT<Eigen::SparseMatrix<float>> solver(G);
+        Eigen::SparseLU<Eigen::SparseMatrix<float>> solver(G);
 
-        // // Matrix X also constant
-        // Eigen::MatrixX2f X = build_X();
-
-        // 3. iteration
-        float error = 10.0f;
-        auto jacobian = mesh_.face_property<Eigen::Matrix2f>("jacobian");
-        auto L = mesh_.face_property<Eigen::Matrix2f>("ARAP_L");
-        int k = 0;
+        float energy = 0.0f; // namely the energy in the paper
+        int k = 0; // iter times
         while (k++ < ARAP_max_iter_times) {
-            // Local phase
-            // for each triangle, namely each face, using u,x to compute Jacobian
-            for (auto f : mesh_.faces()) {
-                jacobian[f] = compute_jacobian(f);
-                // SVD
-                Eigen::JacobiSVD<Eigen::Matrix2f> svd(jacobian[f], Eigen::ComputeFullU | Eigen::ComputeFullV);
-                Eigen::Matrix2f U = svd.matrixU(), V = svd.matrixV();
-                // Eigen::Vector2f Sigma = svd.singularValues();
-                Eigen::Matrix2f Lf = U * V.transpose();
+            ARAP_local();
+            ARAP_global(solver);
 
-                // keep det(Lf) = 1
-                if (Lf.determinant() < 0.0f) {
-                    if (Lf(0, 0) > 0.0f) {
-                        Lf.col(1) *= -1.0f;
-                    } else {
-                        Lf.col(0) *= -1.0f;
-                    }
-                }
-                L[f] = Lf;
-            }
-
-            // Global phase
-            // build matrix B
-            Eigen::MatrixX2f B = build_B();
-
-            // solve GU = B,  U = [u, v]
-            Eigen::MatrixX2f U = solver.solve(B);
-            for (auto v : mesh_.vertices()) {
-                int i = v.idx();
-                pmp::Point uv{ U(i, 0), U(i, 1), 0.0f };
-                ARAP_uv[v] = uv;
-            }
-
-            // update the error
-            error = 0.0f;
-            for (auto h : mesh_.halfedges()) {
-                float cot_ij = cot[h];
-                auto vi = mesh_.from_vertex(h), vj = mesh_.to_vertex(h);
-                auto uvi = ARAP_uv[vi], uvj = ARAP_uv[vj];
-                auto xyi = mesh_.position(vi), xyj = mesh_.position(vj);
-                Eigen::Vector2f UV;
-                UV << uvi[0] - uvj[0], uvi[1] - uvj[1];
-                Eigen::Vector2f X;
-                X << xyi[0] - xyj[0], xyi[1] - xyj[1];
-                auto f = mesh_.face(h);
-                if (!f.is_valid()) {
-                    continue;
-                }
-                Eigen::Vector2f E = UV - L[f] * X;
-                error += cot_ij * E.squaredNorm();
-            }
-            std::cout << "error: " << error << ", iter: " << k << " times" << std::endl;
+            float old_energy = energy;
+            energy = update_energy();
+            std::cout << "the absolute value of the change of energy: " 
+                << std::abs(energy - old_energy) << ", iter: " << k << " times" << std::endl;
         }
 
         // update vertex position
@@ -183,8 +127,8 @@ private:
         }
     }
 
-    pmp::FaceProperty<float> compute_all_area() {
-        auto area = mesh_.face_property<float>("ARAP_area");
+    pmp::HalfedgeProperty<pmp::Point> compute_project() {
+        auto proj = mesh_.halfedge_property<pmp::Point>("ARAP_proj");
         for (auto f : mesh_.faces()) {
             auto h0 = mesh_.halfedge(f);
             auto h1 = mesh_.next_halfedge(h0);
@@ -196,27 +140,53 @@ private:
             auto p1 = mesh_.position(v1);
             auto p2 = mesh_.position(v2);
             auto e0 = p1 - p0, e1 = p2 - p1, e2 = p0 - p2;
-            area[f] = pmp::norm(pmp::cross(e0, e1));
+            auto ne0 = pmp::norm(e0), ne2 = pmp::norm(e2);
+            pmp::Point x0{ 0.0f, 0.0f, 0.0f }, x1{ 0.0f, 0.0f, 0.0f }, x2{ 0.0f, 0.0f, 0.0f };
+            x1[0] = ne0;
+            x2[0] = pmp::dot(e0, -e2) / ne0;
+            x2[1] = pmp::norm(pmp::cross(e0, -e2)) / ne0;
+            
+            proj[h0] = x1 - x0;
+            proj[h1] = x2 - x1;
+            proj[h2] = x0 - x2;
+        }
+        
+        return proj;
+    }
+
+    pmp::FaceProperty<float> compute_all_area() {
+        auto area = mesh_.face_property<float>("ARAP_area", 0.0f);
+        for (auto f : mesh_.faces()) {
+            auto h0 = mesh_.halfedge(f);
+            auto h1 = mesh_.next_halfedge(h0);
+            auto h2 = mesh_.next_halfedge(h1);
+            auto v0 = mesh_.to_vertex(h2);
+            auto v1 = mesh_.to_vertex(h0);
+            auto v2 = mesh_.to_vertex(h1);
+            auto p0 = mesh_.position(v0);
+            auto p1 = mesh_.position(v1);
+            auto p2 = mesh_.position(v2);
+            auto e0 = p1 - p0, e1 = p2 - p1, e2 = p0 - p2;
+            area[f] = pmp::norm(pmp::cross(e0, -e2));
         }
         return area;
     }
     
     pmp::HalfedgeProperty<float> compute_all_cot() {
-        auto cot = mesh_.halfedge_property<float>("ARAP_cot");
+        auto cot = mesh_.halfedge_property<float>("ARAP_cot", 0.0f);
         for (auto f : mesh_.faces()) {
             auto h0 = mesh_.halfedge(f);
             auto h1 = mesh_.next_halfedge(h0);
             auto h2 = mesh_.next_halfedge(h1);
-            auto v0 = mesh_.to_vertex(h0);
-            auto v1 = mesh_.to_vertex(h1);
-            auto v2 = mesh_.to_vertex(h2);
+            auto v0 = mesh_.to_vertex(h2);
+            auto v1 = mesh_.to_vertex(h0);
+            auto v2 = mesh_.to_vertex(h1);
             auto p0 = mesh_.position(v0);
             auto p1 = mesh_.position(v1);
             auto p2 = mesh_.position(v2);
-
-            cot[h0] = pmp::cotan(p0 - p1, p2 - p1);
-            cot[h1] = pmp::cotan(p1 - p2, p0 - p2);
-            cot[h2] = pmp::cotan(p1 - p0, p2 - p0);
+            cot[h0] = pmp::cotan(p0 - p2, p1 - p2);
+            cot[h1] = pmp::cotan(p1 - p0, p2 - p0);
+            cot[h2] = pmp::cotan(p0 - p1, p2 - p1);
         }
         return cot;
     }
@@ -226,6 +196,69 @@ private:
         for (auto v : mesh_.vertices()) {
             ARAP_uv[v] = mesh_.position(v);
         }
+
+        // compute all area to scale
+        auto area = mesh_.face_property<float>("ARAP_area");
+        float tot_area = 0.0f;
+        for (auto f : mesh_.faces()) {
+            tot_area += area[f];
+        }
+        float scale = std::sqrtf(tot_area / EIGEN_PI);
+
+        // get boundary vertices
+        const auto boundary_v = get_boundary_vertices();
+
+        // map the boundary_v to a unit circle
+        const int n = boundary_v.size();
+        const float step = 2.0f * EIGEN_PI / (float) n;
+        float theta = 0.0f;
+        for (int i = 0; i < n; i++) {
+            pmp::Point p{ std::cosf(theta), std::sinf(theta), 0.0f };
+            p *= scale;
+            theta += step;
+            auto v = boundary_v[i];
+            ARAP_uv[v] = p;
+        }
+
+        // build and solve the linear system
+        std::vector<Eigen::Triplet<float>> tri;
+        Eigen::MatrixXf B(mesh_.n_vertices(), 2);
+        B.setZero();
+        for (auto v : mesh_.vertices()) {
+            const int i = v.idx() ;
+
+            if (mesh_.is_boundary(v)) {
+                tri.push_back({ i, i, 1.0f });
+                auto p = ARAP_uv[v];
+                B(i, 0) = p[0];
+                B(i, 1) = p[1];
+            } else {
+                float ii = 0.0f;
+                for (auto vv : mesh_.vertices(v)) {
+                    int j = vv.idx();
+                    tri.push_back({ i, j, -1.0f });
+                    ii += 1.0f;
+                }
+                tri.push_back({ i, i, ii });
+            }
+        }
+        
+        Eigen::SparseMatrix<float> A(mesh_.n_vertices(), mesh_.n_vertices());
+        A.setFromTriplets(tri.begin(), tri.end());
+        
+        Eigen::SparseLU<Eigen::SparseMatrix<float>> solver(A);
+        const Eigen::MatrixXf X = solver.solve(B);
+
+        // update the coordinate
+        for (auto v : mesh_.vertices()) {
+            if (mesh_.is_boundary(v)) {
+                continue;
+            } else {
+                pmp::Point p{ X(v.idx(), 0), X(v.idx(), 1), 0.0 };
+                ARAP_uv[v] = p;
+            }
+        }
+
         return ARAP_uv;
     }
 
@@ -236,18 +269,18 @@ private:
         Eigen::SparseMatrix<float> G(nv, nv);
 
         auto cot = mesh_.halfedge_property<float>("ARAP_cot");
-        for (auto v : mesh_.vertices()) {
-            float d = 0.0f; // diagnose element
-            int i = v.idx();
-            for (auto h : mesh_.halfedges(v)) {
-                int j = mesh_.to_vertex(h).idx();
-                float w = 0.0f;
-                w += cot[h];
-                w += cot[mesh_.opposite_halfedge(h)];
-                G_tri.push_back({ i, j, -w });
-                d += w;
-            }
-            G_tri.push_back({ i, i, d });
+        for (auto h : mesh_.halfedges()) {
+            if (mesh_.is_boundary(h))
+                continue;
+            
+            auto v0 = mesh_.from_vertex(h);
+            auto v1 = mesh_.to_vertex(h);
+
+            const int idx0 = v0.idx(), idx1 = v1.idx();
+            G_tri.emplace_back(idx0, idx0, cot[h]);
+            G_tri.emplace_back(idx1, idx1, cot[h]);
+            G_tri.emplace_back(idx0, idx1, -cot[h]);
+            G_tri.emplace_back(idx1, idx0, -cot[h]);
         }
 
         G.setFromTriplets(G_tri.begin(), G_tri.end());
@@ -255,71 +288,133 @@ private:
         return G;
     }
 
-    // Eigen::MatrixX2f build_X() {
-    //     int nv = mesh_.n_vertices();
-    //     Eigen::MatrixX2f X;
-    //     for (auto v : mesh_.vertices()) {
-    //         int i = v.idx();
-    //         auto p = mesh_.position(v);
-    //         X(i, 0) = p[0];
-    //         X(i, 1) = p[1];
-    //     }
-    //     return X;
-    // }
+    void ARAP_local() {
+        auto jacobian = mesh_.face_property<Eigen::Matrix2f>("jacobian"); // J: x -> u
+        auto L = mesh_.face_property<Eigen::Matrix2f>("ARAP_L"); // the auxiliary matrix (read the paper for details)
+        // for each triangle, namely each face, using u,x to compute Jacobian
+        for (auto f : mesh_.faces()) {
+            jacobian[f] = compute_jacobian(f);
+            // SVD
+            Eigen::JacobiSVD<Eigen::Matrix2f> svd(jacobian[f], Eigen::ComputeFullU | Eigen::ComputeFullV);
+            Eigen::Matrix2f U = svd.matrixU(), V = svd.matrixV();
+            Eigen::Vector2f Sigma = svd.singularValues();
+            Eigen::Matrix2f Lf = U * V.transpose();
+
+            // keep det(Lf) == 1
+            if (Lf.determinant() < 0.0f) {
+                U.col(1) *= -1.0f;
+                Lf = U * V.transpose();
+            }
+            L[f] = Lf;
+        }
+    }
+
+    void ARAP_global(const Eigen::SparseLU<Eigen::SparseMatrix<float>>& solver) {
+        auto ARAP_uv = mesh_.vertex_property<pmp::Point>("ARAP_uv");
+        // build matrix B
+        Eigen::MatrixX2f B = build_B();
+
+        // solve GU = B,  U = [u, v]
+        Eigen::MatrixX2f U = solver.solve(B);
+        for (auto v : mesh_.vertices()) {
+            int i = v.idx();
+            pmp::Point uv{ U(i, 0), U(i, 1), 0.0f };
+            ARAP_uv[v] = uv;
+        }
+    }
+
+    float update_energy() {
+        auto proj = mesh_.halfedge_property<pmp::Point>("ARAP_proj");
+        auto cot = mesh_.halfedge_property<float>("ARAP_cot");
+        auto ARAP_uv = mesh_.vertex_property<pmp::Point>("ARAP_uv");
+        auto L = mesh_.face_property<Eigen::Matrix2f>("ARAP_L");
+        float energy = 0.0f;
+        for (auto h : mesh_.halfedges()) {
+            float cot_ij = cot[h];
+            auto vi = mesh_.from_vertex(h), vj = mesh_.to_vertex(h);
+            auto uvi = ARAP_uv[vi], uvj = ARAP_uv[vj];
+            Eigen::Vector2f UV;
+            UV << uvi[0] - uvj[0], uvi[1] - uvj[1];
+            Eigen::Vector2f X;
+            auto xy = proj[h];
+            X << xy[0], xy[1];
+            auto f = mesh_.face(h);
+            if (!f.is_valid()) {
+                continue;
+            }
+            Eigen::Vector2f E = UV - L[f] * X;
+            energy += cot_ij * E.squaredNorm();
+        }
+        return energy;
+    }
+
     Eigen::MatrixX2f build_B() {
+        auto proj = mesh_.halfedge_property<pmp::Point>("ARAP_proj");
         int nv = mesh_.n_vertices();
         Eigen::MatrixX2f B = Eigen::MatrixX2f::Zero(nv, 2);
         auto L_ = mesh_.face_property<Eigen::Matrix2f>("ARAP_L");
         auto cot = mesh_.halfedge_property<float>("ARAP_cot");
-        for (auto v : mesh_.vertices()) {
-            int i = v.idx();
-            auto xi = mesh_.position(v);
-            Eigen::Vector2f t;
-            t.setZero();
-            for (auto h : mesh_.halfedges(v)) {
-                Eigen::Matrix2f w;
-                w.setZero();
-                auto f = mesh_.face(h);
-                auto oh = mesh_.opposite_halfedge(h);
-                auto of = mesh_.face(oh);
-                auto vj = mesh_.to_vertex(h);
-                auto xj = mesh_.position(vj);
-                if (f.is_valid() && h.is_valid()) {
-                    w += L_[f] * cot[h];
-                }
-                if (of.is_valid() && oh.is_valid()) {
-                    w += cot[oh] * L_[of];
-                }
-                Eigen::Vector2f x;
-                x << xi[0] - xj[0], xi[1] - xj[1];
-                t += w * x;
-            }
-            B(i, 0) = t(0);
-            B(i, 1) = t(1);
+        
+        for (auto f : mesh_.faces()) {
+            auto h0 = mesh_.halfedge(f);
+            auto h1 = mesh_.next_halfedge(h0);
+            auto h2 = mesh_.next_halfedge(h1);
+            auto v0 = mesh_.to_vertex(h2);
+            auto v1 = mesh_.to_vertex(h0);
+            auto v2 = mesh_.to_vertex(h1);
+            auto e0_ = proj[h0];
+            auto e1_ = proj[h1];
+            auto e2_ = proj[h2];
+            Eigen::Vector2f e0, e1, e2; 
+            e0 << e0_[0], e0_[1];
+            e1 << e1_[0], e1_[1];
+            e2 << e2_[0], e2_[1];
+
+            auto Lt = L_[f];
+            Eigen::Vector2f B0 = cot[h0] * Lt * e0;
+            B.row(v0.idx()) -= B0;
+            B.row(v1.idx()) += B0;
+            Eigen::Vector2f B1 = cot[h1] * Lt * e1;
+            B.row(v1.idx()) -= B1;
+            B.row(v2.idx()) += B1;
+            Eigen::Vector2f B2 = cot[h2] * Lt * e2;
+            B.row(v2.idx()) -= B2;
+            B.row(v0.idx()) += B2;
         }
+
         return B;
     }
 
     Eigen::Matrix2f compute_jacobian(const pmp::Face& f) {
+        auto proj = mesh_.halfedge_property<pmp::Point>("ARAP_proj");
         auto area = mesh_.face_property<float>("ARAP_area");
         auto ARAP_uv = mesh_.vertex_property<pmp::Point>("ARAP_uv");
+
         auto hi = mesh_.halfedge(f);
         auto hj = mesh_.next_halfedge(hi);
         auto hk = mesh_.next_halfedge(hj);
+
         auto vi = mesh_.to_vertex(hk);
         auto vj = mesh_.to_vertex(hi);
         auto vk = mesh_.to_vertex(hj);
-        auto xyi = mesh_.position(vi);
-        auto xyj = mesh_.position(vj);
-        auto xyk = mesh_.position(vk);
 
-        auto uvi = ARAP_uv[vi], uvj = ARAP_uv[vj], uvk = ARAP_uv[vk];
-        Eigen::Matrix2f j;
-        j << (xyj[1] - xyk[1]) * uvi[0] + (xyk[1] - xyi[1]) * uvj[0] + (xyi[1] - xyj[1]) * uvk[0],
-             (xyj[0] - xyk[0]) * uvi[0] + (xyk[0] - xyi[0]) * uvj[0] + (xyi[0] - xyj[0]) * uvk[0],
-             (xyj[1] - xyk[1]) * uvi[0] + (xyk[1] - xyi[1]) * uvj[0] + (xyi[1] - xyj[1]) * uvk[0],
-             (xyj[0] - xyk[0]) * uvi[0] + (xyk[0] - xyi[0]) * uvj[0] + (xyi[0] - xyj[0]) * uvk[0];
-        return j;
+        auto xi = proj[hi];
+        auto xj = proj[hj];
+        auto xk = proj[hk];
+
+        auto ui = ARAP_uv[vi];
+        auto uj = ARAP_uv[vj];
+        auto uk = ARAP_uv[vk];
+
+        Eigen::MatrixXf xy(2, 3);
+        Eigen::MatrixXf uv(3, 2);
+        xy << -xj[1], -xk[1], -xi[1],
+               xj[0],  xk[0],  xi[0];
+        uv << ui[0], ui[1],
+              uj[0], uj[1],
+              uk[0], uk[1];
+        Eigen::Matrix2f j = (xy * uv) / area[f];
+        return j.transpose();
     }
 
     void LSCM() {
@@ -481,12 +576,13 @@ private:
     }
 
 private:
+    // some parameter for 
     int ARAP_max_iter_times = 10;
 };
 
 }
 
 int main() {
-    zone::ParameterazationViewer window;
+    zone::ParameterizationViewer window;
     window.run();
 }

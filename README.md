@@ -102,6 +102,10 @@ Tutte's embedding method
 ![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw4_LSCM_face.png)
 
 ## 作业5
-作业5是ARAP参数化, 这个应该是写错了, 下周再改(周末再学DGP, 平时复习考研)
+作业5是ARAP参数化, 因为原理还没完全搞明白, 所以写了好久. 下面分别是balls, bunny, Nefertiti_face的参数化结果
 
-![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw5_ARAP.png)
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw5_ARAP_0.png)
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw5_ARAP_1.png)
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw5_ARAP_2.png)
