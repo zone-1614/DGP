@@ -86,7 +86,7 @@ protected:
             }
             if (ImGui::Button("reload mesh")) {
                 load_mesh(filename_.c_str());
-                set_draw_mode("Smooth Shading");
+                set_draw_mode("Hidden Line");
             }
         }
 

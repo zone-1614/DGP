@@ -28,6 +28,14 @@ if(WIN32)
     add_definitions(-D_USE_MATH_DEFINES -DNOMINMAX)
 endif()
 
+# 关掉msvc的一些warning
+if (MSVC)
+    add_compile_options(/wd4267) # size_t 转换的 warning
+    add_compile_options(/wd4244) # double 转为 float 的 warning
+    add_compile_options(/wd4305) # double 到 float 截断
+    add_compile_options(/wd4819) # 编码相关的 warning
+endif()
+
 find_package(spdlog CONFIG REQUIRED)
 
 message(STATUS "add submodule pmp-library")

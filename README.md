@@ -109,3 +109,5 @@ Tutte's embedding method
 ![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw5_ARAP_1.png)
 
 ![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw5_ARAP_2.png)
+
+好久没写DGP的作业, 这段时间主要去复习考研和提升一些工程能力了. 回过头来看这个ARAP应该是还有bug, 效果不太对, 等以后再回来改改
