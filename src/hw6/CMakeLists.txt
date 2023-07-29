@@ -1,0 +1,8 @@
+add_executable(hw6_ARAP_deformation hw6.cpp)
+target_include_directories(hw6_ARAP_deformation PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/src)
+target_include_directories(hw6_ARAP_deformation PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/imgui)
+target_include_directories(hw6_ARAP_deformation PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/eigen)
+target_include_directories(hw6_ARAP_deformation PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/glfw/include)
+target_include_directories(hw6_ARAP_deformation PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/glew/include)
+target_link_libraries(hw6_ARAP_deformation PRIVATE pmp_vis)
+# target_link_libraries(hw6_ARAP_deformation PRIVATE OpenMP::OpenMP_CXX)

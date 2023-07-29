@@ -61,8 +61,8 @@ protected:
     void process_imgui() {
         pmp::MeshViewer::process_imgui();
         
-        ImGui::SetNextItemWidth(100);
-        ImGui::PushItemWidth(100);
+        ImGui::SetNextItemWidth(150);
+        ImGui::PushItemWidth(150);
 
         ImGui::Spacing();
         if (ImGui::CollapsingHeader("model", ImGuiTreeNodeFlags_DefaultOpen)) {

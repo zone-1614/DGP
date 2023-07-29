@@ -36,6 +36,13 @@ if (MSVC)
     add_compile_options(/wd4819) # 编码相关的 warning
 endif()
 
+# find_package(OpenMP REQUIRED)
+# if (OpenMP_FOUND)
+#     message(STATUS "found openmp")
+#     set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS}, ${OPENMP_C_FLAGS})
+#     set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}, ${OPENMP_CXX_FLAGS})
+# endif()
+
 find_package(spdlog CONFIG REQUIRED)
 
 message(STATUS "add submodule pmp-library")

@@ -111,3 +111,12 @@ Tutte's embedding method
 ![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw5_ARAP_2.png)
 
 好久没写DGP的作业, 这段时间主要去复习考研和提升一些工程能力了. 回过头来看这个ARAP应该是还有bug, 效果不太对, 等以后再回来改改
+
+## 作业6
+作业6是ARAP deformation, 我写出来的好慢, 可能是这个框架不如OpenMesh快, 不过主要是因为我没开多线程. 并且我没做到很方便的交互.
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw6_ARAP_deformation.png)
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw6_ARAP_deformation2.png)
+
+![](https://raw.githubusercontent.com/zone-1614/pic/main/img/hw6_ARAP_deformation3.png)
