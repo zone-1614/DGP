@@ -5,4 +5,4 @@ target_include_directories(hw6_ARAP_deformation PRIVATE ${PROJECT_SOURCE_DIR}/ex
 target_include_directories(hw6_ARAP_deformation PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/glfw/include)
 target_include_directories(hw6_ARAP_deformation PRIVATE ${PROJECT_SOURCE_DIR}/external/pmp-library/external/glew/include)
 target_link_libraries(hw6_ARAP_deformation PRIVATE pmp_vis)
-# target_link_libraries(hw6_ARAP_deformation PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries(hw6_ARAP_deformation PRIVATE spdlog::spdlog spdlog::spdlog_header_only)

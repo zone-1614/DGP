@@ -3,6 +3,14 @@
 #include <filesystem>
 #include <iostream>
 #include <random>
+#include <functional>
+#include <chrono>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <future>
+#include <vector>
+#include <queue>
 
 #include <pmp/MatVec.h>
 #include <pmp/visualization/MeshViewer.h>
@@ -13,6 +21,18 @@ namespace zone {
 
 namespace fs = std::filesystem;
 static fs::path current_path = fs::current_path();
+
+std::ostream& operator<<(std::ostream& os, pmp::Point p) {
+    return os << p[0] << ", " << p[1] << ", " << p[2];
+}
+
+void elapse(std::function<void()> f) {
+    auto t0 = std::chrono::steady_clock::now();
+    f();
+    auto t1 = std::chrono::steady_clock::now();
+    auto dt = t1 - t0;
+    std::cout << "cost " << std::chrono::duration_cast<std::chrono::milliseconds>(dt).count() << "ms" << std::endl;
+}
 
 // return a random double in [0.0, 1.0)
 double random_double() {
@@ -104,6 +124,64 @@ protected:
 
 private:
     std::vector<std::string> models_;
+};
+
+class ThreadPool {
+public:
+    ThreadPool(int n_threads = 16)
+        : stop(false)
+        // , n_running(0) 
+    {
+        for (int i = 0; i < n_threads; i++) {
+            threads.push_back(std::thread([this] {
+                std::function<void()> task;
+                while (true) {
+                    {// acquire lock
+                        std::unique_lock lck(this->mtx);
+                        while (!this->stop && this->tasks.empty()) {
+                            this->cond.wait(lck);
+                        }
+                        if (this->stop)
+                            return;
+                        task = this->tasks.front();
+                        this->tasks.pop();
+                    }// release lock
+                    // this->n_running++;
+                    task();
+                    // this->n_running--;
+                    wait_cond.notify_one();
+                }
+            }));
+        }
+    }
+    void enqueue(std::function<void()> f) {
+        {// acquire lock
+            std::unique_lock lck(mtx);
+            tasks.push(f);
+        }// release lock
+        cond.notify_one();
+    }
+    void waitAll() {
+        std::unique_lock lck(mtx);
+        wait_cond.wait(lck, [this] {
+            // return this->tasks.empty() && this->n_running == 0;
+            return this->tasks.empty();
+        });
+    }
+    ~ThreadPool() {
+        stop = true;
+        cond.notify_all();
+        for (auto& t : threads)
+            t.join();
+    }
+private:
+    std::mutex mtx;
+    std::condition_variable cond;
+    std::condition_variable wait_cond; // 用于等待所有线程执行完毕
+    std::vector<std::thread> threads;
+    std::queue<std::function<void()>> tasks;
+    // std::atomic_uint n_running;
+    bool stop;
 };
 
 }
